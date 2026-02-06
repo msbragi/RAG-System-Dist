@@ -74,7 +74,8 @@ N8N --- LLM_EXT
 
 > **🎥 Watch the "Point-and-Click" verification in action:**
 >
-> <video src="assets/Point-And-Click-reduced.mp4" controls autoplay loop muted width="100%"></video>
+> [![Watch the video](assets/chat-dashboard.png)](assets/Point-And-Click-reduced.mp4)
+> *(Click the image above to play the video)*
 
 ---
 
