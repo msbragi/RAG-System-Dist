@@ -107,26 +107,7 @@ Through a custom **SSH2-based node in n8n**, the system can:
 
 The entire stack is **containerized using Docker Compose**, supporting multi-node deployment. Each microservice is independently scalable, allowing for high-availability configurations in production environments.
 
-Punto fondamentale. Se vogliamo attirare partner del calibro di NVIDIA o Qdrant, devono capire immediatamente che non stanno guardando un'idea su carta, ma un **prodotto pronto al deploy (Production-Ready)**.
-
-Dobbiamo cambiare il registro linguistico: da "sviluppo" a "deployment", da "prototipo" a "framework operativo".
-
-Ecco come modifichiamo il `README.md` e l'introduzione per mettere in chiaro che il sistema è **live e testato**.
-
 ---
-
-### 1. Modifica all'Executive Summary (README.md)
-
-Cambiamo l'incipit per essere estremamente diretti:
-
-> **DistriRAG** is a **fully operational, production-ready RAG ecosystem**. This repository serves as the technical documentation and architectural showcase for a system currently capable of managing complex document intelligence at scale.
-> **Status:** ✅ Production-Grade | ✅ Fully Containerized | ✅ Field-Tested
-
----
-
-### 2. Sezione "Operational Readiness"
-
-Aggiungi questa sezione nel `README.md` per dissipare ogni dubbio sulla maturità del progetto:
 
 ## 🚀 6. Operational Readiness & Deployment
 
