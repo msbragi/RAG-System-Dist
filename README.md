@@ -33,6 +33,11 @@
 
 ```mermaid
 graph TD
+subgraph "Application Layer"
+    FE[Angular Frontend]
+    BE[NestJS Backend]
+end
+
 subgraph "Orchestration (The Brain)"
     N8N{n8n Orchestrator}
 end
@@ -48,7 +53,8 @@ subgraph "Hybrid Inference Layer"
     LLM_LOC[Local LLM: Ollama/vLLM]
 end
 
-FE[Angular Frontend] <--> N8N
+FE <--> BE
+BE <--> N8N
 N8N <--> FAST
 N8N <--> QD
 N8N <--> SSH
@@ -69,19 +75,22 @@ Most RAG systems suffer from "hallucinated references." **DistriRAG** solves thi
 ```mermaid
 sequenceDiagram
     participant U as User (Angular)
+    participant B as NestJS Backend
     participant N as n8n Webhook
     participant Q as Qdrant (Vector)
     participant P as Postgres (Metadata)
     participant L as LLM Engine
 
-    U->>N: Query + Context ID
+    U->>B: Query + Context ID
+    B->>N: Proxy Request
     N->>Q: Similarity Search
     Q-->>N: Chunk UUIDs + Scores
     N->>P: Fetch Metadata (Page, Coordinates, Text)
     P-->>N: Source-Verified Context
     N->>L: Contextualized Prompt
     L-->>N: Answer with Ref IDs
-    N->>U: Final Answer + Deep Links
+    N-->>B: Final Answer + Deep Links
+    B-->>U: Forward Response
 ```
 
 ## 🌐 4. Hybrid-Edge Operations (SSH Orchestration)
