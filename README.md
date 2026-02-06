@@ -7,6 +7,9 @@ RAG System is a fully operational, production-ready RAG ecosystem. This reposito
 
 Status: ✅ Production-Grade | ✅ Fully Containerized | ✅ Field-Tested
 
+
+"Private deployment guide and full source code available for partners. This repository contains architectural documentation and public assets."
+
 ---
 
 ## 📋 1. Executive Summary
@@ -145,4 +148,3 @@ Global settings for the RAG pipeline.
 ![Config](assets/config.png)
 
 ---
-
