@@ -1,6 +1,8 @@
 # 🚀 RAG System Framework
 ### Distributed, Agnostic, and Deterministic RAG Architecture
 
+![Welcome](assets/wellcome.png)
+
 RAG System is a fully operational, production-ready RAG ecosystem. This repository serves as the technical documentation and architectural showcase for a system currently capable of managing complex document intelligence at scale.
 
 Status: ✅ Production-Grade | ✅ Fully Containerized | ✅ Field-Tested
@@ -70,6 +72,10 @@ N8N --- LLM_EXT
 
 🔍 **Deep Dive**: For a detailed breakdown of the synchronization protocols, SSH orchestration, and the citation-to-PDF navigation logic, see [architecture.md](./architecture.md).
 
+> **🎥 Watch the "Point-and-Click" verification in action:**
+>
+> <video src="assets/Point-And-Click-reduced.mp4" controls autoplay loop muted width="100%"></video>
+
 ---
 
 ```mermaid
@@ -108,7 +114,6 @@ Through a custom **SSH2-based node in n8n**, the system can:
 The entire stack is **containerized using Docker Compose**, supporting multi-node deployment. Each microservice is independently scalable, allowing for high-availability configurations in production environments.
 
 ---
-
 ## 🚀 6. Operational Readiness & Deployment
 
 Unlike conceptual prototypes, **RAG System is a battle-tested framework** designed for immediate integration:
@@ -116,3 +121,28 @@ Unlike conceptual prototypes, **RAG System is a battle-tested framework** design
 * **Pre-configured Orchestration:** All n8n workflows are finalized and tested for edge-case handling.
 * **Automated Provisioning:** The included Docker stack and SQL init scripts deploy a fully functional environment in minutes.
 * **Hardware Agnostic:** Currently running on hybrid environments, leveraging both local GPU clusters (via SSH) and managed cloud inference.
+
+
+## 📸 7. Interface Showcase
+
+### 💬 Interactive Chat & Verification
+The core interface where users interact with documents. Note the verified citations.
+![Chat Dashboard](assets/chat-dashboard.png)
+
+### 🎛️ Admin Dashboard
+Real-time overview of system status, ingested documents, and vector store stats.
+![Admin Dashboard](assets/admin-dashboard.png)
+
+### 🤖 Model Management
+Configure local (Ollama) or cloud (OpenAI/Gemini) models dynamically.
+
+| Models Overview | Model Settings |
+|-----------------|----------------|
+| ![Models](assets/models.png) | ![Settings](assets/model-setting.png) |
+
+### ⚙️ System Configuration
+Global settings for the RAG pipeline.
+![Config](assets/config.png)
+
+---
+
