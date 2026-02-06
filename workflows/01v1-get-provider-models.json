@@ -1,0 +1,264 @@
+{
+  "name": "01v1 - Get Provider Models",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1104,
+        -240
+      ],
+      "id": "a7427127-5cf8-4135-9074-28dfdafbf168",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "discover-models",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -880,
+        -48
+      ],
+      "id": "eb635998-932b-4a91-8bf7-766ebfcd7a33",
+      "name": "Webhook",
+      "webhookId": "dd425abd-9dd8-4436-9587-9c5a85ea7095"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        16,
+        -144
+      ],
+      "id": "edf029fd-ccab-46c2-9dc4-532dd1d18cfe",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": " { \"body\": {\n    \"type\": \"OpenAI\",\n    \"url\": \"http://localhost:1234/v1/models\",\n    \"bearer\": \"\",\n    \"key\": \"\"\n  }\n }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -880,
+        -240
+      ],
+      "id": "6f0f44a4-4bdb-4f17-97b2-5ea1dee529be",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "={{ $json.bearer }}",
+              "value": "={{ $json.key }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6a0a2122-9a56-4a72-bc3f-a8bde386b44f",
+      "name": "Get Models",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -432,
+        -208
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Normalizes the response from different AI providers (OpenAI, Google, Ollama, etc.)\n * into a unified format for the frontend.\n * \n * Output:\n * {\n *   success: true,\n *   provider: string,\n *   models: Array<{ id: string, name: string }>\n * }\n */\nreturn [{ json: { success: true, provider: 'MockProvider', models: [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -256
+      ],
+      "id": "c2e195a6-b61c-47ae-85e6-ad4deb455f7c",
+      "name": "Normalize Output"
+    },
+    {
+      "parameters": {
+        "jsCode": "return {\n  success: false,\n  error: $json.message || $json.error  || 'Failed to fetch models',\n  statusCode: $json.statusCode || 500\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -48
+      ],
+      "id": "666ab0af-c269-46e8-b545-3dddb110b36f",
+      "name": "Normalize Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Validates the incoming request body.\n * Checks for required fields: 'type' and 'url'.\n * \n * Throws an error if validation fails.\n */\nreturn [{ json: { type: 'Mock', url: 'http://mock' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        -144
+      ],
+      "id": "dc02619d-7596-4935-b9b4-52fd0997b20e",
+      "name": "Validate Input",
+      "retryOnFail": false,
+      "onError": "continueErrorOutput"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "accept": "application/json, text/plain, */*",
+            "content-type": "application/json",
+            "user-agent": "axios/1.13.1",
+            "content-length": "102",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "host": "host.docker.internal:5678",
+            "connection": "keep-alive"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "body": {
+              "type": "OpenApi",
+              "url": "https://api.openai.com/v1/models",
+              "bearer": "Authorization",
+              "key": ""
+            }
+          },
+          "webhookUrl": "http://localhost:5678/webhook/discover-models",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Models": {
+      "main": [
+        [
+          {
+            "node": "Normalize Output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Output": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Error": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Get Models",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "2ef0a76e-fb5c-44a5-a7ee-769a8edc2f7a",
+  "meta": {
+    "instanceId": "916445b9f9bc3e3104e136ffac4e7b7b0a67450032fff4fba40cf7f71dc6aaed"
+  },
+  "id": "iikcF2LeNmeyQfUr",
+  "tags": []
+}

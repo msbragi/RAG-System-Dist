@@ -1,0 +1,193 @@
+# ============================================
+# DEBIAN / SERVER STACK (CORRECT AND COMPLETE VERSION)
+# Ref: Corrections on ports, container names, and missing configurations.
+# ============================================
+name: rag_system
+
+services:
+  # ============================================
+  # VECTOR DATABASE - Qdrant
+  # ============================================
+  qdrant:
+    image: qdrant/qdrant:v1.16
+    container_name: rag_qdrant
+    ports:
+      - "${PORT_QDRANT_HTTP}:6333"
+      - "${PORT_QDRANT_GRPC}:6334"
+    volumes:
+      - ./Volumes/qdrant:/qdrant/storage # Bind Mount
+    environment:
+      - QDRANT_ALLOW_RECOVERY_MODE=true
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    networks:
+      - rag_network
+    restart: unless-stopped
+
+  # ============================================
+  # RELATIONAL DATABASE - Postgres
+  # ============================================
+  postgresdb:
+    image: postgres:16-alpine
+    container_name: rag_postgres
+    ports:
+      - "${PORT_POSTGRES}:5432"
+    volumes:
+      - ./Volumes/postgres:/var/lib/postgresql/data # Bind Mount
+      - ./Config/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./Config/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./Config/postgres/init/:/docker-entrypoint-initdb.d/:ro # init scripts
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    networks:
+      - rag_network
+    restart: unless-stopped
+
+  # ============================================
+  # CACHING - Redis
+  # ============================================
+  redis:
+    image: redis:7-alpine
+    container_name: rag_redis
+    ports:
+      - "${PORT_REDIS}:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - ./Volumes/redis:/data # Bind Mount
+    networks:
+      - rag_network
+    restart: unless-stopped
+
+  # ============================================
+  # WORKFLOW AUTOMATION - n8n
+  # ============================================
+  n8n:
+    build:
+      context: ./Images/n8n
+      dockerfile: Dockerfile
+    image: rag-n8n
+    container_name: rag_n8n
+    ports:
+      - "${N8N_PORT}:${N8N_PORT}"
+    environment:
+      - NODE_FUNCTION_ALLOW_EXTERNAL=ssh2
+      - NODE_PATH=/usr/local/lib/node_modules
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      - N8N_GIT_NODE_DISABLE_BARE_REPOS=true
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
+      - NODE_OPTIONS=--max-old-space-size=2048
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PORT=${N8N_PORT}
+      - N8N_PROTOCOL=${N8N_PROTOCOL}
+      - N8N_RUNNERS_ENABLED=false
+#      - N8N_RUNNERS_ENABLED=true # Uncomment n8n-runners service
+#      - N8N_RUNNERS_PORT=5679
+#      - N8N_RUNNERS_HOST=n8n_runners # runner service name
+#      - N8N_RUNNERS_AUTH_TOKEN=n8n-runner-token-secret-xvfgz # must match in runner
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgresdb
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${N8N_DB_NAME}
+      - DB_POSTGRESDB_SCHEMA=${N8N_DB_SCHEMA}
+      - DB_POSTGRESDB_USER=${N8N_DB_USER}
+      - DB_POSTGRESDB_PASSWORD=${N8N_DB_PASSWORD}
+    volumes:
+      - ./Volumes/n8n:/home/node/.n8n # Bind Mount
+    depends_on:
+      - postgresdb
+      - redis
+    networks:
+      - rag_network
+    restart: unless-stopped
+
+  # ============================================
+  # Required by new n8n 2.0
+  # ============================================
+#  n8n_runners:
+#    #image: n8nio/runners:latest
+#    build:
+#      context: ./images/n8n
+#      dockerfile: Dockerfile.runner
+#    image: rag-n8n-runner
+#    container_name: rag_n8n_runners
+#    environment:
+#      - NODE_FUNCTION_ALLOW_EXTERNAL=ssh2
+#      - NODE_PATH=/usr/local/lib/node_modules # Fondamentale per far trovare ssh2
+#      - N8N_RUNNERS_AUTH_TOKEN=n8n-runner-token-secret-xvfgz # Lo stesso di sopra
+#      - N8N_RUNNERS_PORT=5679 
+#    networks:
+#      - rag_network
+#    restart: unless-stopped
+
+
+  # ============================================
+  # EMBEDDINGS SERVICE - Sentence Transformers
+  # ============================================
+  embeddings:
+    build:
+      context: ./Images/embeddings
+      dockerfile: Dockerfile
+    container_name: rag_embeddings
+    ports:
+      - "${PORT_EMBEDDINGS}:8000"
+    volumes:
+      - ./Volumes/embeddings:/app/models # Bind Mount
+      - ./Config/embeddings/models/embedding_config.json:/app/models/embedding_config.json:ro
+    networks:
+      - rag_network
+    restart: unless-stopped
+
+  # ============================================
+  # BACKEND - NestJs
+  # ============================================
+  backend:
+    build:
+      context: ./Images/backend
+      dockerfile: Dockerfile
+    image: rag-backend
+    container_name: rag_backend
+    ports:
+      - "${PORT_BACKEND}:3000"
+    volumes:
+      - ./Volumes/backend/app:/opt/backend/app
+      - ./Volumes/backend/data:/opt/backend/app/data
+      - ./Config/backend/.env:/opt/backend/app/.env:ro
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - postgresdb
+    networks:
+      - rag_network
+    restart: unless-stopped
+
+  # ============================================
+  # FRONTEND - nginx
+  # ============================================
+  frontend:
+    build:
+      context: ./Images/frontend
+      dockerfile: Dockerfile
+    image: rag-frontend
+    container_name: rag_frontend
+    ports:
+      - "${PORT_FRONTEND}:80"
+    volumes:
+      - ./Volumes/frontend:/usr/share/nginx/html/
+      - ./Config/frontend/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./Config/frontend/assets/config/app-config.json:/usr/share/nginx/html/assets/config/app-config.json:ro
+    entrypoint: ["nginx", "-g", "daemon off;"]
+    networks:
+      - rag_network
+    restart: unless-stopped
+
+networks:
+  rag_network:
+    driver: bridge
+    name: rag_network

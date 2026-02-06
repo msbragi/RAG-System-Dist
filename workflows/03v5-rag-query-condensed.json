@@ -1,0 +1,772 @@
+{
+  "name": "03v5 - RAG Query Condensed",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "query",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5e29fea5-36fc-4591-a900-01cc150fc9e5",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -832,
+        -272
+      ],
+      "webhookId": "ec9f697b-e7fa-4ea9-9bab-c80aa0c57ff8"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://embeddings:8000/embed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"text\": [$json.question] } }}",
+        "options": {}
+      },
+      "id": "64afe0e1-348e-4dcf-a3fb-bd7d449c0a43",
+      "name": "Generate Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        64,
+        -464
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Prepares the search payload for Vector DB (Qdrant).\n * Applies filters based on doc_ids if present.\n */\nreturn [{ json: { vector: [], limit: 10, with_payload: true } }];"
+      },
+      "id": "ed5426ab-4369-4a49-89fb-943db77f9b85",
+      "name": "Prepare Search",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        -464
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://qdrant:6333/collections/{{ $('Validate Input').item.json.collection }}/points/search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json}}",
+        "options": {}
+      },
+      "id": "e3890b2b-d0ed-4de0-9326-9b7d372dbfce",
+      "name": "Search Qdrant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        736,
+        -464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Extracts vector search results and builds SQL query.\n * Fetches full text content for the matched chunks.\n */\nreturn [{ json: { sql: 'SELECT * FROM chunks WHERE id IN (...)', params: [] } }];"
+      },
+      "id": "00eb6f10-f430-425e-8153-1413db2760b7",
+      "name": "Extract Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        -464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://embeddings:8000/rerank",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "01afa27f-31d7-4ccb-b035-cbd095c4fedc",
+      "name": "Rerank Chunks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1632,
+        -464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "22a6aec4-f888-4717-9b9d-06bd6524a4b5",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2752,
+        -560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Validates RAG parameters (context_key, model settings).\n * Calculates dynamic context window size.\n */\nreturn [{ json: { valid: true } }];"
+      },
+      "id": "b2597406-b670-4c21-8ef8-61036dd8309e",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        -368
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n    status: \"KO\",\n    node: \"Validate input\",\n    message: {{ $json.error }},\n    error: {{ $json }}\n}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "6b0667a2-067d-4195-a51e-2d04cd3d74eb",
+      "name": "Validate error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        64,
+        -272
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1056,
+        -464
+      ],
+      "id": "7d8dc86e-7de8-447e-9b17-91f1d2064ab8",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": " { \"body\": {\n    \"question\": \"Quanto sono pagati i docenti della formazione professionale? \",\n    \"context_key\": \"sudest\",\n    \"model_id\": 1,\n    \"top_k\": 3,\n    \"rerank\": false\n  }\n }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -832,
+        -464
+      ],
+      "id": "40be1896-8e64-4f0b-ad58-9c838157c62e",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Fallback processing when Rerank is disabled.\n * Prepares payload directly for LLM.\n */\nreturn [{ json: { rerank: false } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        -464
+      ],
+      "id": "8ed62b49-5a48-469d-903a-cf5ae227b302",
+      "name": "No Rerank Process",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Maps reranked/retrieved chunks to source metadata.\n * Constructs the final context string for the LLM prompt.\n * \n * Output:\n * {\n *   context: string,\n *   sources: Array<Source>,\n *   rag_prompt: string\n * }\n */\nreturn [{ json: { context: '...', sources: [] } }];"
+      },
+      "id": "83de675c-0f31-4d2e-9b19-cc21a93f776c",
+      "name": "Map Reranked Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        -464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.rag_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{ $json.rag_api_key }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": `${$json.rag_prompt}\\n\\nContext:\\n${$json.context}\\n\\nQuestion: ${$json.question}\\n\\nAnswer:`\n    }]\n  }],\n  \"generationConfig\": {\n    \"temperature\": $json.rag_temperature,\n    \"maxOutputTokens\": $json.rag_max_tokens\n  }\n} }}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 2000
+            }
+          }
+        }
+      },
+      "id": "ea3cdf4b-7747-4444-91be-13c296c5aa86",
+      "name": "Query Gemini",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2304,
+        -656
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.rag_type }}",
+                    "rightValue": "Google",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "6580a11b-5473-4714-805b-f8cdb7f77cd0"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Google"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "00ac2e4a-1f85-4425-a68b-55dcb3c04a9b",
+                    "leftValue": "={{ $json.rag_type }}",
+                    "rightValue": "Ollama",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Ollama"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c99d82af-ba56-4a6b-99bb-9a594583607b",
+                    "leftValue": "={{ $json.rag_type }}",
+                    "rightValue": "OpenAI",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "OpenAI"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        2080,
+        -480
+      ],
+      "id": "af30b0ab-0566-4c14-9287-6420e564f3ca",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ \n {\n  \"question\": \"\",\n  \"answer\": `Sorry but function to call ${$json.rag_model} LLM is not implemented`,  \n  \"sources\": []\n} }}",
+        "options": {}
+      },
+      "id": "776057ad-f6f1-45fd-baf2-9c52940af44e",
+      "name": "Response1",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2304,
+        -464
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Parses response from Google Gemini.\n * Extracts answer and metadata (token usage, finish reason).\n */\nreturn [{ json: { answer: 'Mock Answer', sources: [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2528,
+        -656
+      ],
+      "id": "07c0609f-64ec-4461-b957-114bd2a61bb4",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Parses response from OpenAI/Ollama.\n * Extracts answer and metadata.\n */\nreturn [{ json: { answer: 'Mock Answer', sources: [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2528,
+        -272
+      ],
+      "id": "92f8c39f-96d3-4344-ba13-d4a281a6d7c4",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT c.context_key AS ctx_key, c.language AS ctx_language, m.*\n  FROM rag_schema.rag_models m, rag_schema.contexts c\n  WHERE c.context_key = '{{ $json.context_key }}'\n    AND m.id = {{ $json.model_id ?? c.rag_model_id}};\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -384,
+        -368
+      ],
+      "id": "409849ee-ecfb-4cd8-b9fd-1a832b48452d",
+      "name": "Get context PG",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "rJTyppeEKvtPj6TA",
+          "name": "RAG DB Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT STRING_AGG(d.id::text, ',') as doc_ids\nFROM rag_schema.documents d\nWHERE d.context_key = '{{ $('Validate Input').item.json.context_key }}'\n  AND d.status = 'completed';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        288,
+        -464
+      ],
+      "id": "18c4eb00-4060-4fe2-8f9f-0339930e5104",
+      "name": "Get Document IDs PG",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "rJTyppeEKvtPj6TA",
+          "name": "RAG DB Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.sql }}",
+        "options": {
+          "queryReplacement": "={{ $json.params }}",
+          "treatQueryParametersInSingleQuotesAsText": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1184,
+        -464
+      ],
+      "id": "3e6edb1a-55e9-4340-984a-6cc01fbdce5f",
+      "name": "Get Chunk Details PG",
+      "alwaysOutputData": false,
+      "credentials": {
+        "postgres": {
+          "id": "rJTyppeEKvtPj6TA",
+          "name": "RAG DB Postgres"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Adds start timestamp to the request for performance tracking.\n */\nreturn [{ json: { startTime: Date.now() } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -608,
+        -368
+      ],
+      "id": "c613ea9a-0cf0-4380-811b-44e15bd67c35",
+      "name": "Parse Input"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.rag_url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.rag_api_key }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ \n{\n    \"model\": `${$json.rag_model}`,\n    \"messages\": [\n        {\n            \"role\": \"user\",\n            \"content\": `${$json.rag_prompt}\\n\\nContext:\\n${$json.context}\\nQuestion:\\n${$json.question}\\n\\nAnswer:\\n`\n        }\n    ],\n    \"temperature\": $json.rag_temperature,\n    \"max_tokens\": $json.rag_max_tokens,\n    \"stream\": false\n}\n}}",
+        "options": {}
+      },
+      "id": "77fafeab-81ab-4229-87ee-581306cde670",
+      "name": "OpenAI compatibile",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2304,
+        -272
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "accept": "application/json, text/plain, */*",
+            "content-type": "application/json",
+            "user-agent": "axios/1.13.1",
+            "content-length": "129",
+            "accept-encoding": "gzip, compress, deflate, br",
+            "host": "n8n:5678",
+            "connection": "keep-alive"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "question": "Che tipo di interventi formativi possono essere effetuati",
+            "context_key": "sudest",
+            "model_id": 3,
+            "top_k": 5,
+            "rerank": 0
+          },
+          "webhookUrl": "http://localhost:5678/webhook/query",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Embedding": {
+      "main": [
+        [
+          {
+            "node": "Get Document IDs PG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Search": {
+      "main": [
+        [
+          {
+            "node": "Search Qdrant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Qdrant": {
+      "main": [
+        [
+          {
+            "node": "Extract Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Results": {
+      "main": [
+        [
+          {
+            "node": "Get Chunk Details PG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rerank Chunks": {
+      "main": [
+        [
+          {
+            "node": "Map Reranked Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Generate Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Parse Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Rerank Process": {
+      "main": [
+        [
+          {
+            "node": "Rerank Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Reranked Results": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Gemini": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Query Gemini",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OpenAI compatibile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get context PG": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Document IDs PG": {
+      "main": [
+        [
+          {
+            "node": "Prepare Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Chunk Details PG": {
+      "main": [
+        [
+          {
+            "node": "No Rerank Process",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Input": {
+      "main": [
+        [
+          {
+            "node": "Get context PG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI compatibile": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "d6f70c8f-6781-4981-8334-8105a9c881c3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "916445b9f9bc3e3104e136ffac4e7b7b0a67450032fff4fba40cf7f71dc6aaed"
+  },
+  "id": "emS0LfimbWUEVSnk",
+  "tags": []
+}

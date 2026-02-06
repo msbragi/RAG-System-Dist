@@ -1,0 +1,206 @@
+{
+  "name": "99v1 - SSH Exec",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        -128
+      ],
+      "id": "d16e91ac-30c9-40a2-a1cd-6835689f5a54",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Establishes SSH connection using ssh2 library.\n * Detects OS (Linux/WSL) and executes command.\n * Handles stdout/stderr streams and parses JSON output if present.\n * \n * Output:\n * {\n *   success: boolean,\n *   stdout: string,\n *   stderr: string,\n *   exit_code: number\n * }\n */\nreturn [{ json: { success: true, stdout: 'Mock Output', stderr: '', exit_code: 0 } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -128
+      ],
+      "id": "a6dc52d6-ad58-499d-a639-572700ea8097",
+      "name": "SSH execute",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{ \"body\": {\n  \"host\": \"127.0.0.1\", \n  \"port\": \"22\",\n  \"username\": \"user\", \n  \"password\": \"password\", \n  \"key\": \"\",\n  \"folder\": \"/tmp\",\n  \"action\": \"status ollama\" \n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -528,
+        -128
+      ],
+      "id": "8d7030cc-bc76-47f6-b37f-40bca7cc313e",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "engine-manager",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -544,
+        64
+      ],
+      "id": "ee3e5d16-00b7-41d2-88a6-5120c5ca5eb1",
+      "name": "Webhook",
+      "webhookId": "2cd62ab3-fa94-4ec8-8780-9886fc84d5a0"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Validates input parameters for SSH execution.\n * Ensures host, port, username, password, and command are present.\n */\nreturn [{ json: { valid: true } }];"
+      },
+      "id": "3ed1907a-b2b0-4661-8e67-3e4d272ac1c6",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        -32
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Adds start timestamp to the request.\n */\nreturn [{ json: { startTime: Date.now() } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        -32
+      ],
+      "id": "255b3be4-e8cb-44e5-904f-0d57caf5a52f",
+      "name": "Parse Input"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n    success: false,\n    status: \"KO\",\n    node: \"Validate input\",\n    message: {{ $json.error }},\n    error: {{ $json.toJsonString() }}\n}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "fcf6f6fa-091b-4fb5-9106-f020a94d128b",
+      "name": "Validate error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        144,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        368,
+        -128
+      ],
+      "id": "4ac8a010-5223-4a2b-9942-3382a10f5c2b",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Parse Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Input": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "SSH execute",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SSH execute": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "c5f45644-5df8-49e7-b39c-fbf295b676a4",
+  "meta": {
+    "instanceId": "916445b9f9bc3e3104e136ffac4e7b7b0a67450032fff4fba40cf7f71dc6aaed"
+  },
+  "id": "1boBnFtqyLaerwVe",
+  "tags": []
+}

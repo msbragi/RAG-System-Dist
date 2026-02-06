@@ -1,0 +1,94 @@
+/**
+ * DISTRIRAG - DATABASE INITIALIZATION (PARTIAL SCHEMA)
+ * * NOTICE: This schema is a reduced version of the production database structure.
+ * Internal logic, optimized indexes, and specific fields are omitted for 
+ * intellectual property and copyright protection.
+ * * Purpose: Architectural demonstration for partnership evaluations.
+ */
+
+SET ROLE rag_user;
+CREATE SCHEMA IF NOT EXISTS rag_schema;
+SET search_path TO rag_schema;
+
+-- ==========================================================
+-- 1. SYSTEM CONFIGURATION (Dynamic & Hot-Swap Logic)
+-- ==========================================================
+-- This table allows real-time configuration of the RAG engine without restarts.
+CREATE TABLE rag_schema.rag_config (
+    key VARCHAR(50) PRIMARY KEY,
+    is_env_value BOOLEAN NOT NULL DEFAULT FALSE,
+    value JSONB NOT NULL, -- Contains URLs, LDAP, and Engine configs
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==========================================================
+-- 2. PROVIDERS & MODELS (Abstraction Layer)
+-- ==========================================================
+-- Handles multiple LLM providers (Cloud & On-Premise via SSH/API).
+CREATE TABLE rag_schema.rag_models (
+    id SERIAL PRIMARY KEY,
+    type VARCHAR(20) NOT NULL,    -- 'Chat', 'Embedding', etc.
+    provider VARCHAR(20),         -- 'Local', 'Google', 'Groq', etc.
+    name VARCHAR(255) NOT NULL,
+    temperature DOUBLE PRECISION DEFAULT 0.2,
+    is_active BOOLEAN DEFAULT TRUE
+    -- [ADDITIONAL PROPRIETARY FIELDS OMITTED]
+);
+
+-- ==========================================================
+-- 3. CONTEXTS & TENANCY (Segmentation Layer)
+-- ==========================================================
+-- Defines the RAG environment (embeddings, chunking rules, language).
+CREATE TABLE rag_schema.contexts (
+    id SERIAL PRIMARY KEY,
+    context_key VARCHAR(30) UNIQUE NOT NULL,
+    context_name VARCHAR(255) NOT NULL,
+    embedding_model VARCHAR(255),
+    embedding_dimensions INTEGER DEFAULT 384,
+    chunk_size INTEGER DEFAULT 512,
+    is_active BOOLEAN DEFAULT TRUE
+    -- [LOGIC FOR DEPARTMENTAL ACCESS OMITTED]
+);
+
+-- ==========================================================
+-- 4. DOCUMENT MANAGEMENT (Vector Store Mapping)
+-- ==========================================================
+-- Primary metadata for document tracking and deduplication.
+CREATE TABLE rag_schema.documents (
+    id CHAR(36) PRIMARY KEY,
+    context_key VARCHAR(30) NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    content_hash CHAR(64) NOT NULL UNIQUE,
+    status VARCHAR(20) DEFAULT 'completed',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Details for deep-linking (Page/Paragraph citation)
+CREATE TABLE rag_schema.document_chunks (
+    id CHAR(36) PRIMARY KEY,
+    document_id CHAR(36) REFERENCES rag_schema.documents(id) ON DELETE CASCADE,
+    chunk_index INTEGER NOT NULL,
+    page_number INTEGER,
+    para_index INTEGER
+    -- [TEXTUAL CONTENT STORAGE STRATEGY OMITTED]
+);
+
+-- ==========================================================
+-- 5. INITIALIZATION DATA (Mock Examples)
+-- ==========================================================
+
+-- Example of dynamic URL configuration
+INSERT INTO rag_schema.rag_config (key, is_env_value, value) VALUES
+('URLS_CONFIG', true, '{
+    "BACKEND_URL": "http://localhost:3000",
+    "N8N_INGEST_WEBHOOK": "/webhook/ingest",
+    "N8N_QUERY_WEBHOOK": "/webhook/query"
+}');
+
+-- Example of a Local Model (NVIDIA/On-Prem ready)
+INSERT INTO rag_schema.rag_models (type, provider, name, is_active) VALUES
+('Chat', 'Local', 'Llama-3-8B-Instruct-SSH', true);
+
+-- Example of a Context
+INSERT INTO rag_schema.contexts (context_key, context_name, embedding_dimensions) VALUES
+('legal_docs', 'Legal Department Documents', 384);

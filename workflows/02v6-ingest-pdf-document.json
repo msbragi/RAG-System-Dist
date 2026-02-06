@@ -1,0 +1,548 @@
+{
+  "name": "02v6 - Ingest PDF Document",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://embeddings:8000/embed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ \n  { \n    \"text\": $json.chunks.map(c => c.chunk_text),\n    \"model\": $('Validate Input').item.json.model,\n    \"dimension\": $('Validate Input').item.json.dimension\n  } \n\n}}",
+        "options": {}
+      },
+      "id": "46641185-e50a-42fd-b60b-459e54d336dc",
+      "name": "Generate Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -208,
+        -496
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://qdrant:6333/collections/{{ $('Validate Input').item.json.collection }}/points",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Prepare Vector Data').first().json }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "09245674-a181-479e-9755-07bf6cda3e19",
+      "name": "Store Vector in Qdrant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        1136,
+        -592
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"success\": true,\n  \"document_id\": $('Merge All Data').first().json.UUID,\n  \"filename\": $('Merge All Data').first().json.filename,\n  \"source_type\": $('Merge All Data').first().json.source_type,\n  \"content_hash\": $('Merge All Data').first().json.hash,\n  \"chunks_processed\": $('Merge All Data').first().json.chunks.length,\n  \"message\": \"Document ingested successfully\"\n} }}",
+        "options": {}
+      },
+      "id": "4f105435-7565-4c05-93fd-14485a312c6b",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1360,
+        -592
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ingest",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "e5f5e56b-e1e7-4435-9dcc-8756817edcbd",
+      "name": "Webhook - Receive Document",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -1776,
+        -304
+      ],
+      "webhookId": "77299695-fdf1-4a2c-a8b6-75e1904c49ff"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Validates the input for PDF ingestion.\n * Checks filename, source_type, and context settings.\n * \n * Output:\n * {\n *   filename: string,\n *   source_type: 'pdf',\n *   context_key: string,\n *   collection: string\n * }\n */\nreturn [{ json: { filename: 'mock.pdf', context_key: 'mock', collection: 'rag_mock' } }];"
+      },
+      "id": "ec1d2d6a-2f20-4810-94a8-14afc110720c",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1104,
+        -400
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2000,
+        -496
+      ],
+      "id": "ad0a952a-c8cb-4984-9c02-c59b6cbb82c4",
+      "name": "When clicking ‘Execute workflow’",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Splits the PDF content into chunks.\n * Implements sliding window strategy with overlap.\n * Generates UUIDs for each chunk.\n * \n * Output:\n * {\n *   UUID: string,\n *   chunks: Array<{ chunk_text: string, chunk_index: number, chunk_UUID: string }>\n * }\n */\nreturn [{ json: { UUID: 'mock-uuid', chunks: [] } }];"
+      },
+      "id": "b03e8549-338a-4326-b160-7434e837e31a",
+      "name": "Create Chunks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -432,
+        -496
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Formats data for Vector DB insertion.\n * Maps chunks to vector points with payload.\n */\nreturn [{ json: { points: [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        -592
+      ],
+      "id": "ed2f6425-bc18-4fb1-825c-438d1c8bd5c3",
+      "name": "Prepare Vector Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Merges generated embeddings with text chunks.\n */\nreturn [{ json: { chunks: [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -496
+      ],
+      "id": "f15b7ccf-5670-427f-b295-5b113e1dfd39",
+      "name": "Merge All Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Prepares SQL queries for relational DB storage (Postgres/MySQL).\n * Generates 'INSERT INTO documents' and batch 'INSERT INTO document_chunks'.\n * \n * Output:\n * {\n *   sql: string (Transaction SQL),\n *   params: Array<any>\n * }\n */\nreturn [{ json: { sql: 'START TRANSACTION; COMMIT;', params: [] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -496
+      ],
+      "id": "919212a2-93d7-47b5-90ce-eab5c3c0275f",
+      "name": "Prepare DB Data"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{ \"body\" : {\n  \"filename\": \"test\",\n  \"source_type\": \"pdf\",\n  \"context_key\": \"sudest\",\n  \"source_url\" : \"http://localhost:3000/api/v1/documents/36/file\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1776,
+        -496
+      ],
+      "id": "8b8bb5b9-812f-4aa2-b029-d8d2754d58d4",
+      "name": "Create Mock Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Normalizes input from Webhook or Manual Trigger.\n */\nreturn [{ json: { filename: 'mock.pdf' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1552,
+        -400
+      ],
+      "id": "2d08c046-b2b2-4585-9fd3-90996c141333",
+      "name": "Normalize Input"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"error\": \"{{ $json.error }}\",\n  \"data\": {\n    \"filename\": \"{{ $('Normalize Input').item.json.filename }}\",\n    \"source_type\": \"{{ $('Normalize Input').item.json.source_type }}\",\n    \"context_key\": \"{{ $('Normalize Input').item.json.context_key }}\",\n    \"context_id\": {{ $('Get Context').item.json.context_id }}\n  }\n}\n",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -880,
+        -304
+      ],
+      "id": "507a66e8-8927-4a65-8cad-d02d457eba06",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  $json.message && $json.message.includes('Duplicate entry') \n  ? {\n      \"error\": \"duplicate\",\n      \"message\": \"Document with identical content already exists in this context\",\n      \"details\": {\n        \"context_key\": $('Merge All Data').first().json.context_key,\n        \"filename\": $('Merge All Data').first().json.filename,\n        \"content_hash\": $('Merge All Data').first().json.hash\n      }\n    }\n  : {\n      \"error\": \"database_error\",\n      \"message\": \"Failed to store document in database\",\n      \"details\": {\n        \"error\": $json.message || $json.error\n      }\n    }\n}}",
+        "options": {
+          "responseCode": "={{ $json.message && $json.message.includes('Duplicate entry') ? 409 : 500 }}"
+        }
+      },
+      "id": "44d6fede-cb34-405c-868e-1eebabeb26cc",
+      "name": "Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        -400
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.source_url }}",
+        "options": {}
+      },
+      "id": "95d75f92-aefb-4e03-9061-6446f3c69db5",
+      "name": "Fetch PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -880,
+        -496
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://qdrant:6333/collections/{{ $('Validate Input').item.json.collection }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"vectors\": {\n    \"size\": $('Validate Input').item.json.dimension,\n    \"distance\": \"Cosine\"\n  }\n} }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "52992046-f79a-46bc-8c31-247f88a77c0d",
+      "name": "Create Collection if not exist",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        912,
+        -592
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*) as document_count\n  FROM rag_schema.documents\n  WHERE context_key = '{{ $json.context_key }}'\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1328,
+        -400
+      ],
+      "id": "966f14c6-fb3b-4e84-9b4d-f1562ca2d9ab",
+      "name": "Get Context PG",
+      "credentials": {
+        "postgres": {
+          "id": "rJTyppeEKvtPj6TA",
+          "name": "RAG DB Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.sql }}",
+        "options": {
+          "queryReplacement": "={{ $json.params }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        464,
+        -496
+      ],
+      "id": "7d7c8d1d-8304-48a9-ac15-820f59e358a3",
+      "name": "Store Document And Chumks PG",
+      "credentials": {
+        "postgres": {
+          "id": "rJTyppeEKvtPj6TA",
+          "name": "RAG DB Postgres"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://embeddings:8000/extract-pdf-pages",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -656,
+        -496
+      ],
+      "id": "a7d41aaf-e2cd-4a8c-a5ee-ca9ce8c523dd",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {
+    "When clicking ‘Execute workflow’": [
+      {
+        "json": {},
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Generate Embedding": {
+      "main": [
+        [
+          {
+            "node": "Merge All Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Vector in Qdrant": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Receive Document": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Fetch PDF",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Create Mock Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Chunks": {
+      "main": [
+        [
+          {
+            "node": "Generate Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Data": {
+      "main": [
+        [
+          {
+            "node": "Prepare DB Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Vector Data": {
+      "main": [
+        [
+          {
+            "node": "Create Collection if not exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare DB Data": {
+      "main": [
+        [
+          {
+            "node": "Store Document And Chumks PG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Mock Data": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Get Context PG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch PDF": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Collection if not exist": {
+      "main": [
+        [
+          {
+            "node": "Store Vector in Qdrant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Context PG": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Document And Chumks PG": {
+      "main": [
+        [
+          {
+            "node": "Prepare Vector Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Create Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "bd75bf7a-b5c3-473e-8b9d-6ed9df7f1189",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "916445b9f9bc3e3104e136ffac4e7b7b0a67450032fff4fba40cf7f71dc6aaed"
+  },
+  "id": "oXQVOsoh0fFqm0Ls",
+  "tags": []
+}

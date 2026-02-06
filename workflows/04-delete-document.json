@@ -1,0 +1,394 @@
+{
+  "name": "04 - Delete document",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "delete",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "96480eee-ba84-41e2-8121-91204b5f8468",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -1968,
+        544
+      ],
+      "webhookId": "ec9f697b-e7fa-4ea9-9bab-c80aa0c57ff8"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n    db_type: \"{{ $env.RAG_USE_DB ?? 'postgres'}}\", \n    context_id: {{ $json.body.context_id ?? null }},\n    document_id: \"{{ $json.body.document_id ?? '' }}\",\n    context_key: \"{{ $json.body.context_key ?? ''}}\",\n    startTime: {{ new Date().getTime() }}\n}",
+        "options": {}
+      },
+      "id": "358aef29-2e35-44f8-b9ce-e131a6053431",
+      "name": "Parse Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [
+        -1744,
+        448
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"status\": \"OK\",\n  \"message\": \"Workflow executed succesfully\"\n} }}",
+        "options": {}
+      },
+      "id": "0d0e0d64-bb73-47e1-9c6d-3ebc711ec7cf",
+      "name": "Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -624,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Validates deletion request parameters.\n * Prepares SQL and Qdrant filters to remove document and its chunks.\n * \n * Output:\n * {\n *   collection: string,\n *   qdrant_filter: object,\n *   db_filter: { sql: string, params: any[] }\n * }\n */\nreturn [{ json: { collection: 'mock', qdrant_filter: {}, db_filter: {} } }];"
+      },
+      "id": "35df5fdb-7a20-4e7a-a189-093401abbbdf",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1520,
+        448
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -2192,
+        352
+      ],
+      "id": "d92b6419-8229-427d-9f9a-1ddf5bfa6e23",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": " { \"body\": {\n    \"contextx_id\": 2,\n    \"context_key\": \"sudest\",\n    \"document_id\": \"xyz\"\n  }\n }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1968,
+        352
+      ],
+      "id": "e8c1a2f4-5ac4-42b9-9813-4df7293f419e",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "16742e70-f4e1-41c3-b663-df397b747801",
+              "leftValue": "={{ $(\"Parse Input\").first().json.db_type }}",
+              "rightValue": "mysql",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1072,
+        256
+      ],
+      "id": "5f5d9df6-5f59-4c60-b4d5-f2918ad1d084",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $(\"Validate Input\").first().json.db_filter.sql }}",
+        "options": {
+          "queryReplacement": "={{ $(\"Validate Input\").first().json.db_filter.params }}",
+          "detailedOutput": false
+        }
+      },
+      "id": "13b0e16b-74b0-4d97-abb5-7f1efc15165f",
+      "name": "Delete Mysql",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        -848,
+        112
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "YfoIlwxlgGvZlM0R",
+          "name": "MariaDB RAG"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $(\"Validate Input\").first().json.db_filter.sql }}",
+        "options": {
+          "queryReplacement": "={{ $(\"Validate Input\").first().json.db_filter.params }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -848,
+        400
+      ],
+      "id": "434d777c-5d81-47da-ae20-0ddf139f8994",
+      "name": "Delete Postgres",
+      "alwaysOutputData": false,
+      "credentials": {
+        "postgres": {
+          "id": "rJTyppeEKvtPj6TA",
+          "name": "RAG DB Postgres"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://qdrant:6333/collections/{{ $json.collection }}/points/delete",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.qdrant_filter }}",
+        "options": {}
+      },
+      "id": "d5f2711f-19c3-4cc1-9ffc-cb84bc94f76c",
+      "name": "Delete QDrant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -1296,
+        352
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"status\": \"KO\",\n  \"node\": \"Workflow Error\",\n  \"message\": $input.json?.error.message ?? 'Unknown error',\n  \"error\": $json,\n} }}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "a0d42ab4-25a4-46ee-ae91-aab1bd3afa7e",
+      "name": "Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -640,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"status\": \"KO\",\n  \"node\": \"QDrant\"\n  \"error\": $json,\n} }}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "4ca411a6-c68f-4a1c-9871-d7669ffe17d2",
+      "name": "Qdrant error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -1072,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"status\": \"KO\",\n  \"node\": \"Validate Input\",\n  \"message\": $json.error?.message ?? 'Unknown error',\n  \"error\": $json\n} }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "d7b70f94-ee92-4b45-93d1-639590adf86f",
+      "name": "Validate error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        -1296,
+        544
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Input": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Delete QDrant",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Parse Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Delete Mysql",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Delete Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Mysql": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Postgres": {
+      "main": [
+        [
+          {
+            "node": "Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete QDrant": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qdrant error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0331fb91-cdf2-40c1-8a88-c841ffa3ebce",
+  "meta": {
+    "instanceId": "916445b9f9bc3e3104e136ffac4e7b7b0a67450032fff4fba40cf7f71dc6aaed"
+  },
+  "id": "WqtQzCCbcTAiuIOB",
+  "tags": []
+}

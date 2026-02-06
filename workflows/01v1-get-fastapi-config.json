@@ -1,0 +1,107 @@
+{
+  "name": "01v1 - Get Fastapi Config",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -528,
+        -128
+      ],
+      "id": "def6f0a7-b69a-4815-bcb4-f327f552d00e",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "url": "http://embeddings:8000/",
+        "options": {}
+      },
+      "id": "25bdb51c-339d-456e-b4fb-9174caf15696",
+      "name": "Get config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -304,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "path": "fastapi/config",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -528,
+        80
+      ],
+      "id": "75abf839-f8f4-49e1-80ae-c1d9d581ff72",
+      "name": "Webhook",
+      "webhookId": "0c913cdd-0de7-4d50-bdc4-4528336f4f42"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -32,
+        -128
+      ],
+      "id": "9d047bfb-e571-468e-bc1e-b14b4cd5c0fa",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get config": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "258bc86d-2fa3-426b-8017-0a1650a0521e",
+  "meta": {
+    "instanceId": "916445b9f9bc3e3104e136ffac4e7b7b0a67450032fff4fba40cf7f71dc6aaed"
+  },
+  "id": "LDQxvMt9MlrHdcmP",
+  "tags": []
+}
