@@ -31,6 +31,31 @@
 
 ---
 
+```mermaid
+graph TD
+subgraph "Orchestration (The Brain)"
+    N8N{n8n Orchestrator}
+end
+
+subgraph "Data & Vector Services"
+    FAST[FastAPI Service]
+    QD[(Qdrant Vector DB)]
+end
+
+subgraph "Hybrid Inference Layer"
+    SSH[SSH Engine Manager]
+    LLM_EXT[Cloud LLM: Gemini/OpenAI]
+    LLM_LOC[Local LLM: Ollama/vLLM]
+end
+
+FE[Angular Frontend] <--> N8N
+N8N <--> FAST
+N8N <--> QD
+N8N <--> SSH
+SSH --- LLM_LOC
+N8N --- LLM_EXT
+```
+
 ## 💡 3. Key Innovation: Deterministic Source Traceability
 
 Most RAG systems suffer from "hallucinated references." **DistriRAG** solves this by:
@@ -40,6 +65,24 @@ Most RAG systems suffer from "hallucinated references." **DistriRAG** solves thi
 3. **Allowing the user to click** an AI-generated citation and instantly open the source document at the exact page and paragraph.
 
 ---
+
+```mermaid
+sequenceDiagram
+    participant U as User (Angular)
+    participant N as n8n Webhook
+    participant Q as Qdrant (Vector)
+    participant P as Postgres (Metadata)
+    participant L as LLM Engine
+
+    U->>N: Query + Context ID
+    N->>Q: Similarity Search
+    Q-->>N: Chunk UUIDs + Scores
+    N->>P: Fetch Metadata (Page, Coordinates, Text)
+    P-->>N: Source-Verified Context
+    N->>L: Contextualized Prompt
+    L-->>N: Answer with Ref IDs
+    N->>U: Final Answer + Deep Links
+```
 
 ## 🌐 4. Hybrid-Edge Operations (SSH Orchestration)
 
