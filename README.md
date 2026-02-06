@@ -74,7 +74,7 @@ N8N --- LLM_EXT
 
 > **🎥 Watch the "Point-and-Click" verification in action:**
 >
-> [![Watch the video](assets/chat-dashboard.png)](assets/Point-And-Click-reduced.mp4)
+> [![Watch the video](assets/chat-dashboard.png)](assets/Point-And-Click-reduced.mp4?raw=true)
 > *(Click the image above to play the video)*
 
 ---
