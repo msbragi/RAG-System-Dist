@@ -36,7 +36,7 @@ Status: ✅ Production-Grade | ✅ Fully Containerized | ✅ Field-Tested
   **NestJS** provides a robust backend for user management and system configuration.
 
 - **🎨 Presentation Layer:**  
-  **Angular** offers a specialized UI featuring "Point-and-Click" source verification.
+  **Angular** offers a specialized UI featuring "Point-and-Click" source verification. The UI language is fully integrated with a language translation system run-time configurable.
 
 ---
 
@@ -124,13 +124,15 @@ Unlike conceptual prototypes, **RAG System is a battle-tested framework** design
 * **Pre-configured Orchestration:** All n8n workflows are finalized and tested for edge-case handling.
 * **Automated Provisioning:** The included Docker stack and SQL init scripts deploy a fully functional environment in minutes.
 * **Hardware Agnostic:** Currently running on hybrid environments, leveraging both local GPU clusters (via SSH) and managed cloud inference.
+* **Easy Distribution:** Automagic distribution using Docker and Kubernetes, local or cloud comaptibility.
+* **Inference Engine:** Each context can use it's one inference engine local or cloud. 
 
 
 ## 📸 7. Interface Showcase
 
 ### 💬 Interactive Chat & Verification
 The core interface where users interact with documents. Note the verified citations.
-![Chat Dashboard](assets/chat-dashboard.png)
+![Chat Dashboard](assets/Point-And-Click.gif)
 
 ### 🎛️ Admin Dashboard
 Real-time overview of system status, ingested documents, and vector store stats.
