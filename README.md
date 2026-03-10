@@ -10,6 +10,9 @@ Status: ✅ Production-Grade | ✅ Fully Containerized | ✅ Field-Tested
 
 "Private deployment guide and full source code available for partners. This repository contains architectural documentation and public assets."
 
+For other information on how the RAG is built visit my web site at
+https://www.nospace.net/en/blog-separator/agnostic-rag
+
 ---
 
 ## 📋 1. Executive Summary
